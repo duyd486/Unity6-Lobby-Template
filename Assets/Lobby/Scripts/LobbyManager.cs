@@ -1,3 +1,4 @@
+using System;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Lobbies;
@@ -6,6 +7,17 @@ using UnityEngine;
 
 public class LobbyManager : MonoBehaviour
 {
+    public static LobbyManager Instance { get; private set; }
+
+    public event EventHandler OnLobbyCreated;
+
+    private Lobby hostLobby;
+    private float heartbeatTimer;
+
+    private void Awake()
+    {
+        Instance = this;
+    }
 
     private async void Start()
     {
@@ -21,21 +33,24 @@ public class LobbyManager : MonoBehaviour
 
     private void Update()
     {
+        HandleLobbyHeartbeat();
         if(Input.GetKeyDown(KeyCode.Space))
         {
-            CreateLobby();
+            CreateLobby("MyLobby", 4);
         }
     }
 
 
-    public async void CreateLobby()
+    public async void CreateLobby(string lobbyName, int maxPlayer)
     {
         try
         {
-            string lobbyName = "MyLobby";
-            int maxPlayer = 4;
-            Lobby lobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayer);
-            Debug.Log("Create Lobby " + lobby.Name + " " + lobby.MaxPlayers);
+            Debug.Log("Start Create Lobby");
+            hostLobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayer);
+            Debug.Log("Create Lobby " + hostLobby.Name + " " + hostLobby.MaxPlayers);
+
+            OnLobbyCreated?.Invoke(this, EventArgs.Empty);
+
         } catch (LobbyServiceException e)
         {
             Debug.LogException(e);
@@ -72,6 +87,20 @@ public class LobbyManager : MonoBehaviour
         catch (LobbyServiceException e)
         {
             Debug.LogException(e);
+        }
+    }
+
+    private async void HandleLobbyHeartbeat()
+    {
+        if(hostLobby != null)
+        {
+            heartbeatTimer -= Time.deltaTime;
+            if(heartbeatTimer < 0)
+            {
+                heartbeatTimer = 15;
+
+                await LobbyService.Instance.SendHeartbeatPingAsync(hostLobby.Id);
+            }
         }
     }
 
