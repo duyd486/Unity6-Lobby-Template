@@ -13,6 +13,7 @@ public class LobbySingleUI : MonoBehaviour
 
     public void UpdateLobby(Lobby lobby)
     {
+        this.lobby = lobby;
         nameText.text = name;
     }
 }
