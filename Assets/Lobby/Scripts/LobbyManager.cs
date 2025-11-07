@@ -13,16 +13,21 @@ public class LobbyManager : MonoBehaviour
     public event EventHandler OnLobbyCreated;
 
     private Lobby hostLobby;
+
     private List<Lobby> currentLobbies;
     private float heartbeatTimer;
+    private string playerName;
 
     private void Awake()
     {
         Instance = this;
+        playerName = "duy" + UnityEngine.Random.Range(10, 99);
+        Debug.Log("Player Name: " + playerName);
     }
 
     private async void Start()
     {
+
         await UnityServices.InitializeAsync();
 
         AuthenticationService.Instance.SignedIn += () =>
@@ -31,28 +36,34 @@ public class LobbyManager : MonoBehaviour
         };
 
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
+
+
     }
 
     private void Update()
     {
         HandleLobbyHeartbeat();
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            CreateLobby("MyLobby", 4);
-        }
     }
 
 
-    public async void CreateLobby(string lobbyName, int maxPlayer)
+    public async void CreateLobby(string lobbyName, int maxPlayer, Action<Lobby> HostLobby)
     {
         try
         {
             Debug.Log("Start Create Lobby");
-            hostLobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayer);
+
+            CreateLobbyOptions createLobbyOptions = new CreateLobbyOptions
+            {
+                IsPrivate = false,
+                Player = GetPlayer()
+            };
+
+
+            hostLobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayer, createLobbyOptions);
             Debug.Log("Create Lobby " + hostLobby.Name + " " + hostLobby.MaxPlayers);
 
             OnLobbyCreated?.Invoke(this, EventArgs.Empty);
-
+            HostLobby(hostLobby);
         }
         catch (LobbyServiceException e)
         {
@@ -84,13 +95,30 @@ public class LobbyManager : MonoBehaviour
         }
     }
 
-    public async void JoinLobby()
+    public async void JoinLobby(string id, Action<Lobby> UpdateLobby)
     {
         try
         {
             QueryResponse queryResponse = await LobbyService.Instance.QueryLobbiesAsync();
 
-            await LobbyService.Instance.JoinLobbyByIdAsync(queryResponse.Results[0].Id);
+            JoinLobbyByIdOptions joinLobbyByIdOptions = new JoinLobbyByIdOptions
+            {
+                Player = GetPlayer()
+            };
+            Lobby joinedLobby = await LobbyService.Instance.JoinLobbyByIdAsync(id, joinLobbyByIdOptions);
+            UpdateLobby(joinedLobby);
+        }
+        catch (LobbyServiceException e)
+        {
+            Debug.LogException(e);
+        }
+    }
+
+    public async void LeaveLobby()
+    {
+        try
+        {
+            QueryResponse queryResponse = await LobbyService.Instance.QueryLobbiesAsync();
         }
         catch (LobbyServiceException e)
         {
@@ -117,4 +145,19 @@ public class LobbyManager : MonoBehaviour
         return currentLobbies;
     }
 
+    public Player GetPlayer()
+    {
+        return new Player
+        {
+            Data = new Dictionary<string, PlayerDataObject>
+            {
+                {"PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, playerName) }
+            }
+        };
+    }
+
+    public void SetPlayerName(string playerName)
+    {
+        this.playerName = playerName;
+    }
 }

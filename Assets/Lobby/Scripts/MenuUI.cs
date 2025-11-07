@@ -16,6 +16,9 @@ public class MenuUI : MonoBehaviour
     [SerializeField] private Button createBtn;
     [SerializeField] private TMP_InputField nameLobbyInput;
 
+    [SerializeField] private TMP_InputField playerNameInput;
+    [SerializeField] private Button confirmPlayerNameBtn;
+
 
     public event EventHandler OnListLobbyClick;
 
@@ -27,6 +30,13 @@ public class MenuUI : MonoBehaviour
 
     private void Start()
     {
+        playerNameInput.text = LobbyManager.Instance.GetPlayer().Data["PlayerName"].Value;
+
+        playerNameInput.onValueChanged.AddListener((name) =>
+        {
+            LobbyManager.Instance.SetPlayerName(playerNameInput.text);
+        });
+
         createLobbyBtn.onClick.AddListener(() => { createLobbyModal.SetActive(true); });
 
         cancelCreateBtn.onClick.AddListener(() => { createLobbyModal.SetActive(false); });
@@ -46,7 +56,10 @@ public class MenuUI : MonoBehaviour
 
     private void CreateLobby()
     {
-        LobbyManager.Instance.CreateLobby(nameLobbyInput.text, 4);
+        LobbyManager.Instance.CreateLobby(nameLobbyInput.text, 4, (lobby) =>
+        {
+            LobbyUI.Instance.UpdateLobby(lobby);
+        });
         createLobbyModal.SetActive(false);
     }
 
