@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Lobbies;
@@ -12,6 +13,7 @@ public class LobbyManager : MonoBehaviour
     public event EventHandler OnLobbyCreated;
 
     private Lobby hostLobby;
+    private List<Lobby> currentLobbies;
     private float heartbeatTimer;
 
     private void Awake()
@@ -34,7 +36,7 @@ public class LobbyManager : MonoBehaviour
     private void Update()
     {
         HandleLobbyHeartbeat();
-        if(Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space))
         {
             CreateLobby("MyLobby", 4);
         }
@@ -51,19 +53,25 @@ public class LobbyManager : MonoBehaviour
 
             OnLobbyCreated?.Invoke(this, EventArgs.Empty);
 
-        } catch (LobbyServiceException e)
+        }
+        catch (LobbyServiceException e)
         {
             Debug.LogException(e);
         }
     }
 
-    public async void ListLobbies()
+    public async void ListLobbies(Action ShowLobbies)
     {
         try
         {
             QueryLobbiesOptions options = new QueryLobbiesOptions();
 
             QueryResponse queryResponse = await LobbyService.Instance.QueryLobbiesAsync();
+
+            currentLobbies = queryResponse.Results;
+
+            ShowLobbies();
+
             Debug.Log("Found " + queryResponse.Results.Count + " lobby");
             foreach (Lobby lobby in queryResponse.Results)
             {
@@ -92,16 +100,21 @@ public class LobbyManager : MonoBehaviour
 
     private async void HandleLobbyHeartbeat()
     {
-        if(hostLobby != null)
+        if (hostLobby != null)
         {
             heartbeatTimer -= Time.deltaTime;
-            if(heartbeatTimer < 0)
+            if (heartbeatTimer < 0)
             {
                 heartbeatTimer = 15;
 
                 await LobbyService.Instance.SendHeartbeatPingAsync(hostLobby.Id);
             }
         }
+    }
+
+    public List<Lobby> GetCurrentLobbies()
+    {
+        return currentLobbies;
     }
 
 }

@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,22 +10,44 @@ public class MenuUI : MonoBehaviour
     [SerializeField] private Button createLobbyBtn;
     [SerializeField] private Button listLobbyBtn;
 
+
+    [SerializeField] private GameObject createLobbyModal;
+    [SerializeField] private Button cancelCreateBtn;
+    [SerializeField] private Button createBtn;
+    [SerializeField] private TMP_InputField nameLobbyInput;
+
+
     public event EventHandler OnListLobbyClick;
 
     private void Awake()
     {
         Instance = this;
+        createLobbyModal.SetActive(false);
     }
 
     private void Start()
     {
-        createLobbyBtn.onClick.AddListener(() => {
-            LobbyManager.Instance.CreateLobby("My Lobby", 4);
+        createLobbyBtn.onClick.AddListener(() => { createLobbyModal.SetActive(true); });
+
+        cancelCreateBtn.onClick.AddListener(() => { createLobbyModal.SetActive(false); });
+
+        createBtn.onClick.AddListener(CreateLobby);
+
+
+
+        listLobbyBtn.onClick.AddListener(() =>
+        {
+            LobbyManager.Instance.ListLobbies(() =>
+            {
+                OnListLobbyClick?.Invoke(this, EventArgs.Empty);
+            });
         });
-        listLobbyBtn.onClick.AddListener(() => {
-            OnListLobbyClick?.Invoke(this, EventArgs.Empty);
-            //Hide();
-        });
+    }
+
+    private void CreateLobby()
+    {
+        LobbyManager.Instance.CreateLobby(nameLobbyInput.text, 4);
+        createLobbyModal.SetActive(false);
     }
 
     private void Show()
