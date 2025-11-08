@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using WebSocketSharp;
 
 public class MenuUI : MonoBehaviour
 {
@@ -17,7 +18,6 @@ public class MenuUI : MonoBehaviour
     [SerializeField] private TMP_InputField nameLobbyInput;
 
     [SerializeField] private TMP_InputField playerNameInput;
-    [SerializeField] private Button confirmPlayerNameBtn;
 
 
     public event EventHandler OnListLobbyClick;
@@ -56,6 +56,7 @@ public class MenuUI : MonoBehaviour
 
     private void CreateLobby()
     {
+        if (nameLobbyInput.text.IsNullOrEmpty()) return;
         LobbyManager.Instance.CreateLobby(nameLobbyInput.text, 4, (lobby) =>
         {
             LobbyUI.Instance.UpdateLobby(lobby);

@@ -11,11 +11,19 @@ public class LobbyManager : MonoBehaviour
     public static LobbyManager Instance { get; private set; }
 
     public event EventHandler OnLobbyCreated;
+    public event EventHandler<OnLobbyDataChangedEventArgs> OnLobbyDataChanged;
+    public class OnLobbyDataChangedEventArgs : EventArgs
+    {
+        public Lobby lobby;
+    }
 
     private Lobby hostLobby;
 
+    private Lobby joinedLobby;
+
     private List<Lobby> currentLobbies;
     private float heartbeatTimer;
+    private float lobbyUpdateTimer;
     private string playerName;
 
     private void Awake()
@@ -43,6 +51,7 @@ public class LobbyManager : MonoBehaviour
     private void Update()
     {
         HandleLobbyHeartbeat();
+        HandleLobbyUpdate();
     }
 
 
@@ -60,7 +69,7 @@ public class LobbyManager : MonoBehaviour
 
 
             hostLobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayer, createLobbyOptions);
-            Debug.Log("Create Lobby " + hostLobby.Name + " " + hostLobby.MaxPlayers);
+            joinedLobby = hostLobby;
 
             OnLobbyCreated?.Invoke(this, EventArgs.Empty);
             HostLobby(hostLobby);
@@ -82,12 +91,6 @@ public class LobbyManager : MonoBehaviour
             currentLobbies = queryResponse.Results;
 
             ShowLobbies();
-
-            Debug.Log("Found " + queryResponse.Results.Count + " lobby");
-            foreach (Lobby lobby in queryResponse.Results)
-            {
-                Debug.Log("Lobby found " + lobby.Name + " " + lobby.MaxPlayers);
-            }
         }
         catch (LobbyServiceException e)
         {
@@ -95,7 +98,7 @@ public class LobbyManager : MonoBehaviour
         }
     }
 
-    public async void JoinLobby(string id, Action<Lobby> UpdateLobby)
+    public async void JoinLobby(string id)
     {
         try
         {
@@ -105,8 +108,11 @@ public class LobbyManager : MonoBehaviour
             {
                 Player = GetPlayer()
             };
-            Lobby joinedLobby = await LobbyService.Instance.JoinLobbyByIdAsync(id, joinLobbyByIdOptions);
-            UpdateLobby(joinedLobby);
+            joinedLobby = await LobbyService.Instance.JoinLobbyByIdAsync(id, joinLobbyByIdOptions);
+            OnLobbyDataChanged?.Invoke(this, new OnLobbyDataChangedEventArgs
+            {
+                lobby = joinedLobby
+            });
         }
         catch (LobbyServiceException e)
         {
@@ -118,7 +124,12 @@ public class LobbyManager : MonoBehaviour
     {
         try
         {
-            QueryResponse queryResponse = await LobbyService.Instance.QueryLobbiesAsync();
+            await LobbyService.Instance.RemovePlayerAsync(joinedLobby.Id, AuthenticationService.Instance.PlayerId);
+            joinedLobby = null;
+            OnLobbyDataChanged?.Invoke(this, new OnLobbyDataChangedEventArgs
+            {
+                lobby = joinedLobby
+            });
         }
         catch (LobbyServiceException e)
         {
@@ -136,6 +147,25 @@ public class LobbyManager : MonoBehaviour
                 heartbeatTimer = 15;
 
                 await LobbyService.Instance.SendHeartbeatPingAsync(hostLobby.Id);
+            }
+        }
+    }
+
+    private async void HandleLobbyUpdate()
+    {
+        if (joinedLobby != null)
+        {
+            lobbyUpdateTimer -= Time.deltaTime;
+            if (lobbyUpdateTimer < 0)
+            {
+                lobbyUpdateTimer = 1.5f;
+
+                joinedLobby = await LobbyService.Instance.GetLobbyAsync(joinedLobby.Id);
+
+                OnLobbyDataChanged?.Invoke(this, new OnLobbyDataChangedEventArgs
+                {
+                    lobby = joinedLobby
+                });
             }
         }
     }

@@ -21,7 +21,7 @@ public class LobbySingleUI : MonoBehaviour
     {
         joinBtn.onClick.AddListener(() =>
         {
-            LobbyManager.Instance.JoinLobby(lobby.Id, LobbyUI.Instance.UpdateLobby);
+            LobbyManager.Instance.JoinLobby(lobby.Id);
         });
     }
 
@@ -29,6 +29,6 @@ public class LobbySingleUI : MonoBehaviour
     {
         this.lobby = lobby;
         nameText.text = lobby.Name;
-        playerCountText.text = lobby.AvailableSlots.ToString();
+        playerCountText.text = (lobby.MaxPlayers - lobby.AvailableSlots).ToString() + "/" + lobby.MaxPlayers;
     }
 }
