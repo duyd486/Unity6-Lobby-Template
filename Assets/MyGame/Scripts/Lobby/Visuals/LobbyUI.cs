@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using TMPro;
+using Unity.Netcode;
 using Unity.Services.Lobbies.Models;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,8 +11,11 @@ public class LobbyUI : MonoBehaviour
 
     [SerializeField] private TextMeshProUGUI lobbyName;
     [SerializeField] private Button leaveLobbyBtn;
+    [SerializeField] private Button startGameBtn;
 
-    [SerializeField] private PlayerInfoSingleUI[] playerInfos;
+    [SerializeField] private List<PlayerInfoSingleUI> playerInfos;
+    [SerializeField] private GameObject playerInfoSingleUI;
+    [SerializeField] private GameObject playerContainer;
 
     private Lobby lobby;
 
@@ -23,14 +27,26 @@ public class LobbyUI : MonoBehaviour
     private void Start()
     {
         Hide();
+        playerInfoSingleUI.SetActive(false);
 
         leaveLobbyBtn.onClick.AddListener(() =>
         {
             LobbyManager.Instance.LeaveLobby();
         });
 
+        startGameBtn.onClick.AddListener(() =>
+        {
+            LobbyManager.Instance.LockLobby();
+            //SceneLoader.LoadSceneByNetwork(SceneLoader.Scene.Game);
+        });
 
         LobbyManager.Instance.OnLobbyDataChanged += LobbyManager_OnLobbyDataChanged;
+        LobbyManager.Instance.OnLobbyCreated += LobbyManager_OnLobbyCreated;
+    }
+
+    private void LobbyManager_OnLobbyCreated(object sender, LobbyManager.OnLobbyCreatedEventArgs e)
+    {
+        UpdateLobby(e.hostLobby);
     }
 
     private void LobbyManager_OnLobbyDataChanged(object sender, LobbyManager.OnLobbyDataChangedEventArgs e)
@@ -44,6 +60,16 @@ public class LobbyUI : MonoBehaviour
         {
             Hide();
             return;
+        }
+
+        if (playerInfos.Count < lobby.MaxPlayers)
+        {
+            for (int i = playerInfos.Count; i < lobby.MaxPlayers; i++)
+            {
+                PlayerInfoSingleUI playerInfo = Instantiate(playerInfoSingleUI, playerContainer.transform).GetComponent<PlayerInfoSingleUI>();
+                playerInfos.Add(playerInfo);
+                playerInfo.Show();
+            }
         }
 
         this.lobby = lobby;
@@ -71,6 +97,14 @@ public class LobbyUI : MonoBehaviour
     public void Show()
     {
         gameObject.SetActive(true);
+        if (NetworkManager.Singleton.IsHost)
+        {
+            startGameBtn.gameObject.SetActive(true);
+        }
+        else
+        {
+            startGameBtn.gameObject.SetActive(false);
+        }
     }
     public void Hide()
     {

@@ -17,4 +17,13 @@ public class PlayerInfoSingleUI : MonoBehaviour
     {
         playerNameTxt.text = "Name";
     }
+
+    public void Show()
+    {
+        gameObject.SetActive(true);
+    }
+    public void Hide()
+    {
+        gameObject.SetActive(false);
+    }
 }

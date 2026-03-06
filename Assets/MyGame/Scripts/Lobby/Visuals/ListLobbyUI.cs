@@ -7,24 +7,32 @@ public class ListLobbyUI : MonoBehaviour
 {
     [SerializeField] private Button backBtn;
     [SerializeField] private Button reloadBtn;
-    [SerializeField] private GameObject lobbyInfoTemplate;
     [SerializeField] private GameObject container;
+    [SerializeField] private GameObject lobbySingleUI;
+    [SerializeField] private MenuUI menuUI;
+
+
 
     private void Start()
     {
-        MenuUI.Instance.OnListLobbyClick += MenuUI_OnListLobbyClick;
-
+        menuUI.OnListLobbyClick += MenuUI_OnListLobbyClick;
+        LobbyManager.Instance.OnListLobbiesChanged += LobbyManager_OnListLobbiesChanged;
 
         Hide();
         backBtn.onClick.AddListener(() =>
         {
             Hide();
         });
-        reloadBtn.onClick.AddListener(() =>
+        reloadBtn.onClick.AddListener(async () =>
         {
             Debug.Log("Reload");
-            LobbyManager.Instance.ListLobbies(UpdateListLobby);
+            await LobbyManager.Instance.ListLobbies();
         });
+    }
+
+    private void LobbyManager_OnListLobbiesChanged(object sender, LobbyManager.OnListLobbiesChangedEventArgs e)
+    {
+        UpdateListLobby();
     }
 
     private void MenuUI_OnListLobbyClick(object sender, System.EventArgs e)
@@ -44,7 +52,7 @@ public class ListLobbyUI : MonoBehaviour
 
         for (int i = 0; i < lobbies.Count; i++)
         {
-            GameObject lobbyInfoOb = Instantiate(lobbyInfoTemplate, container.transform);
+            GameObject lobbyInfoOb = Instantiate(lobbySingleUI, container.transform);
             lobbyInfoOb.SetActive(true);
             lobbyInfoOb.GetComponent<LobbySingleUI>().UpdateLobby(lobbies[i]);
         }
